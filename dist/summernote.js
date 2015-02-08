@@ -5789,7 +5789,7 @@
         trigger: 'hover',
         placement: sPlacement || 'top'
       }).on('click', function () {
-        $(this).tooltip('hide');
+        // $(this).tooltip('hide');
       });
     };
 

@@ -71,11 +71,12 @@ define([
     });
 
     test('rng.normalize', function () {
-      var rng, $cont, $p, $b, $u;
-      $cont = $('<div><p><b>b</b><u>u</u></p></div>');
+      var rng, $cont, $p, $b, $u, $s;
+      $cont = $('<div><p><b>b</b><u>u</u><s>s</s></p></div>');
       $p = $cont.find('p');
       $b = $cont.find('b');
       $u = $cont.find('u');
+      $s = $cont.find('s');
 
       rng = range.create($p[0], 0,  $p[0], 2).normalize();
       deepEqual([
@@ -90,7 +91,52 @@ define([
       ], [
         $b[0].firstChild, 1, $b[0].firstChild, 1
       ], 'rng.normalize on `<b>b</b>|<u>u</u>` should returns `<b>b|</b><u>u</u>`');
+
+      rng = range.create($p[0], 1,  $p[0], 1).normalize();
+      deepEqual([
+        rng.sc, rng.so, rng.ec, rng.eo
+      ], [
+        $b[0].firstChild, 1, $b[0].firstChild, 1
+      ], 'rng.normalize on `<b>b</b>|<u>u</u>` should returns `<b>b|</b><u>u</u>`');
+
+      rng = range.create($b[0].firstChild, 1,  $s[0].firstChild, 0).normalize();
+      deepEqual([
+        rng.sc, rng.so, rng.ec, rng.eo
+      ], [
+        $u[0].firstChild, 0, $u[0].firstChild, 1
+      ], 'rng.normalize on `<b>b|</b><u>u</u><s>|s</s>` should returns `<b>b</b><u>|u|</u><s>s</s>`');
+
+      rng = range.create($b[0].firstChild, 1,  $b[0].firstChild, 1).normalize();
+      deepEqual([
+        rng.sc, rng.so, rng.ec, rng.eo
+      ], [
+        $b[0].firstChild, 1, $b[0].firstChild, 1
+      ], 'rng.normalize on `<b>b|</b><u>u</u><s>s</s>` should returns `<b>b|</b><u>u</u><s>s</s>`');
     });
+
+    test('rng.normalize (block level)', function () {
+      var rng, $cont, $p;
+      $cont = $('<div><p>text</p><p><br></p></div>');
+      $p = $cont.find('p');
+
+      rng = range.create($p[1], 0,  $p[1], 0).normalize();
+      deepEqual([
+        rng.sc, rng.so, rng.ec, rng.eo
+      ], [
+        $p[1], 0, $p[1], 0
+      ], 'rng.normalize on `<p>text</p><p>|<br></p>` should returns `<p>text</p><p>|<br></p>`');
+
+      $cont = $('<div><p>text</p><p>text</p></div>');
+      $p = $cont.find('p');
+
+      rng = range.create($p[1], 0,  $p[1], 0).normalize();
+      deepEqual([
+        rng.sc, rng.so, rng.ec, rng.eo
+      ], [
+        $p[1].firstChild, 0, $p[1].firstChild, 0
+      ], 'rng.normalize on `<p>text</p><p>|<b>b<b></p>` should returns `<p>text</p><p><b>|b</b></p>`');
+    });
+
 
     test('rng.insertNode', function () {
       var $cont, $p, $p2, $b, $u;
@@ -119,6 +165,57 @@ define([
 
       range.create($b[0].firstChild, 2, $b[0].firstChild, 2).insertNode($u[0]);
       equalsToUpperCase($cont.html(), '<p><b>bo</b><u>u</u><b>ld</b></p>', 'rng.insertNode with inline should not split paragraph.');
+    });
+
+    test('rng.pasteHTML', function () {
+      var $cont, $p, $b, markup;
+
+      // split text with inline nodes
+      $cont = $('<div class="note-editable"><p>text</p></div>');
+      $p = $cont.find('p');
+      markup = '<span>span</span><i>italic</i>';
+
+      range.create($p[0].firstChild, 2).pasteHTML(markup);
+      equalsToUpperCase($cont.html(), '<p>te<span>span</span><i>italic</i>xt</p>', 'rng.pasteHTML with inlines should not split text.');
+
+      // split inline node with inline nodes
+      $cont = $('<div class="note-editable"><p><b>bold</b></p></div>');
+      $p = $cont.find('p');
+      $b = $cont.find('b');
+      markup = '<span>span</span><i>italic</i>';
+
+      range.create($b[0].firstChild, 2).pasteHTML(markup);
+      equalsToUpperCase(
+        $cont.html(),
+        '<p><b>bo</b><span>span</span><i>italic</i><b>ld</b></p>',
+        'rng.pasteHTML with inlines should not split text.'
+      );
+
+      // split inline node with inline and block nodes
+      $cont = $('<div class="note-editable"><p><b>bold</b></p></div>');
+      $p = $cont.find('p');
+      $b = $cont.find('b');
+      markup = '<span>span</span><p><i>italic</i></p>';
+
+      range.create($b[0].firstChild, 2).pasteHTML(markup);
+      equalsToUpperCase(
+        $cont.html(),
+        '<p><b>bo</b><span>span</span></p><p><i>italic</i></p><p><b>ld</b></p>',
+        'rng.pasteHTML with inlines should not split text.'
+      );
+
+      // split inline node with inline and block
+      $cont = $('<div class="note-editable"><p><b>bold</b></p></div>');
+      $p = $cont.find('p');
+      $b = $cont.find('b');
+      markup = '<span>span</span><p><i>italic</i></p>';
+
+      range.create($b[0].firstChild, 2).pasteHTML(markup);
+      equalsToUpperCase(
+        $cont.html(),
+        '<p><b>bo</b><span>span</span></p><p><i>italic</i></p><p><b>ld</b></p>',
+        'rng.pasteHTML with inlines should not split text.'
+      );
     });
 
     test('rng.deleteContents', function () {
@@ -177,6 +274,55 @@ define([
       $cont = $('<div class="note-editable"><b>b</b><i>i</i></div>');
       range.create($cont[0], 2).wrapBodyInlineWithPara();
       equalsToUpperCase($cont.html(), '<p><b>b</b><i>i</i></p>', 'rng.wrapBodyInlineWithPara with inline should wrap text with paragraph.');
+    });
+
+    test('rng.getWordRange', function () {
+      var $cont, rng;
+
+      $cont = $('<div class="note-editable">super simple wysiwyg editor</div>');
+
+      // no word before cursor
+      rng = range.create(
+        $cont[0].firstChild, 0
+      ).getWordRange();
+
+      deepEqual([
+        rng.sc, rng.so, rng.ec, rng.eo
+      ], [
+        $cont[0].firstChild, 0, $cont[0].firstChild, 0
+      ], 'rng.getWordRange with no word before cursor should return itself');
+
+      // find word before cursor
+      rng = range.create(
+        $cont[0].firstChild, 5
+      ).getWordRange();
+
+      deepEqual([
+        rng.sc, rng.so, rng.ec, rng.eo
+      ], [
+        $cont[0].firstChild, 0, $cont[0].firstChild, 5
+      ], 'rng.getWordRange with word before cursor should return expanded range');
+
+      rng = range.create(
+        $cont[0].firstChild, 3
+      ).getWordRange();
+
+      deepEqual([
+        rng.sc, rng.so, rng.ec, rng.eo
+      ], [
+        $cont[0].firstChild, 0, $cont[0].firstChild, 3
+      ], 'rng.getWordRange with half word before cursor should expanded range');
+
+      rng = range.create(
+        $cont[0].firstChild, 12
+      ).getWordRange();
+
+      deepEqual([
+        rng.sc, rng.so, rng.ec, rng.eo
+      ], [
+        $cont[0].firstChild, 6, $cont[0].firstChild, 12
+      ], 'rng.getWordRange with half word before cursor should expanded range');
+
     });
   };
 });

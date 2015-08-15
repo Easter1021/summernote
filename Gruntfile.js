@@ -59,6 +59,9 @@ module.exports = function (grunt) {
 
     // uglify: minify javascript
     uglify: {
+      options: {
+        banner: '/*! Summernote v<%=pkg.version%> | (c) 2013-2015 Alan Hong and other contributors | MIT license */\n'
+      },
       all: {
         files: { 'dist/summernote.min.js': ['dist/summernote.js'] }
       }
@@ -71,6 +74,30 @@ module.exports = function (grunt) {
         files: {
           'dist/summernote.css': ['src/less/summernote.less']
         }
+      }
+    },
+
+    // compress: summernote-{{version}}-dist.zip
+    compress: {
+      main: {
+        options: {
+          archive: function () {
+            return 'dist/summernote-{{version}}-dist.zip'.replace(
+              '{{version}}',
+              grunt.config('pkg.version')
+            );
+          }
+        },
+        files: [{
+          expand: true,
+          src: [
+            'dist/*.js',
+            'dist/summernote.css'
+          ]
+        }, {
+          src: ['plugin/*.js'],
+          dest: 'dist/'
+        }]
       }
     },
 
@@ -120,17 +147,20 @@ module.exports = function (grunt) {
   // load all tasks from the grunt plugins used in this file
   require('load-grunt-tasks')(grunt);
 
-  // server
-  grunt.registerTask('server', ['connect', 'watch']);
+  // load all grunts/*.js
+  grunt.loadTasks('grunts');
 
-  // build: build summernote.js
-  grunt.loadTasks('build');
+  // server: runt server for development
+  grunt.registerTask('server', ['connect', 'watch']);
 
   // test: unit test on test folder
   grunt.registerTask('test', ['jshint', 'qunit']);
 
-  // dist
+  // dist: make dist files
   grunt.registerTask('dist', ['build', 'test', 'uglify', 'recess']);
+
+  // deploy: compress dist files
+  grunt.registerTask('deploy', ['dist', 'compress']);
 
   // default: server
   grunt.registerTask('default', ['server']);
